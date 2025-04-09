@@ -2,6 +2,8 @@ import gradio as gr
 import threading
 import time
 from process import generate
+import os
+import random
 
 # Global variable to control the execution
 abort_flag = False
@@ -11,6 +13,11 @@ def run_generation(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_so
     abort_flag = False
     
     try:
+        # Generate a random seed if seed is 0
+        if seed == 0:
+            seed = random.randint(1, 2**31 - 1)  # Use a wide range of positive integers
+            print(f"Generated random seed: {seed}")
+        
         output_path = generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs)
         return "Generation complete!", output_path
     except Exception as e:
@@ -20,6 +27,25 @@ def abort():
     global abort_flag
     abort_flag = True
     return "Aborting...", None
+
+# Load default content from files
+def load_text_file(file_path):
+    try:
+        with open(file_path, 'r') as f:
+            return f.read().strip()
+    except Exception as e:
+        print(f"Error loading {file_path}: {e}")
+        return ""
+
+# Get the absolute path to the files
+script_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(script_dir)
+genre_path = os.path.join(base_dir, "prompt_egs", "genre.txt")
+lyrics_path = os.path.join(base_dir, "prompt_egs", "lyrics.txt")
+
+# Get default values from prompt_egs files
+genre_default = load_text_file(genre_path)
+lyrics_default = load_text_file(lyrics_path)
 
 # Create the Gradio interface
 with gr.Blocks() as demo:
@@ -38,13 +64,15 @@ with gr.Blocks() as demo:
             genre_prompt = gr.Textbox(
                 label="Genres Prompt (one Genres Prompt per line for multiple generations)",
                 placeholder="inspiring female uplifting pop airy vocal electronic bright vocal",
-                lines=3
+                lines=3,
+                value=genre_default
             )
             
             lyrics = gr.Textbox(
                 label="Lyrics",
                 placeholder="[verse]\nStaring at the sunset, colors paint the sky\nThoughts of you keep swirling, can't deny\nI know I let you down, I made mistakes\nBut I'm here to mend the heart I didn't break\n\n[chorus]\nEvery road you take, I'll be one step behind\nEvery dream you chase, I'm reaching for the light",
-                lines=30
+                lines=30,
+                value=lyrics_default
             )
             
             num_songs = gr.Slider(
