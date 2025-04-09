@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Gradio Server",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/gradio/server.py",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
