@@ -1,32 +1,20 @@
 import gradio as gr
 import threading
 import time
+from process import generate
 
 # Global variable to control the execution
 abort_flag = False
 
-def mock_generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
+def run_generation(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     global abort_flag
     abort_flag = False
-    print("mock_generate has been invoked!")
     
-    # Update status with progress
-    status_updates = []
-    # Simulate a long-running process
-    for i in range(10):
-        if abort_flag:
-            print("Generation aborted!")
-            return "Aborted", None
-        # Simulate work
-        time.sleep(0.5)  # Simulate work time
-        print(f"Generating... {i+1}/10")
-        status_updates.append(f"Generating... {i+1}/10")
-        yield ", ".join(status_updates), None
-    
-    # In a real implementation, this would generate an audio file
-    dummy_audio = "https://audio-samples.github.io/samples/mp3/blizzard_biased/sample-1.mp3"
-    
-    return "Generation complete!", dummy_audio
+    try:
+        output_path = generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs)
+        return "Generation complete!", output_path
+    except Exception as e:
+        return f"Error: {str(e)}", None
 
 def abort():
     global abort_flag
@@ -115,7 +103,7 @@ with gr.Blocks() as demo:
     
     # Event handlers
     generate_button.click(
-        fn=mock_generate,
+        fn=run_generation,
         inputs=[genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs],
         outputs=[status, audio_output]
     )
