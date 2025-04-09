@@ -4,14 +4,9 @@ import time
 from process import generate
 import os
 import random
-
-# Global variable to control the execution
-abort_flag = False
+import argparse
 
 def run_generation(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
-    global abort_flag
-    abort_flag = False
-    
     try:
         # Generate a random seed if seed is 0
         if seed == 0:
@@ -22,11 +17,6 @@ def run_generation(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_so
         return "Generation complete!", output_path
     except Exception as e:
         return f"Error: {str(e)}", None
-
-def abort():
-    global abort_flag
-    abort_flag = True
-    return "Aborting...", None
 
 # Load default content from files
 def load_text_file(file_path):
@@ -113,7 +103,6 @@ with gr.Blocks() as demo:
             )
             
             generate_button = gr.Button("Generate")
-            abort_button = gr.Button("Abort")
             
             # Last Generated Song (audio player)
             audio_output = gr.Audio(
@@ -135,13 +124,22 @@ with gr.Blocks() as demo:
         inputs=[genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs],
         outputs=[status, audio_output]
     )
-    
-    abort_button.click(
-        fn=abort,
-        inputs=None,
-        outputs=[status, audio_output]
-    )
 
-# Launch the interface
+# Parse command line arguments
 if __name__ == "__main__":
-    demo.queue().launch()
+    parser = argparse.ArgumentParser(description="Launch YuE Gradio GUI")
+    parser.add_argument("--share", action="store_true", default=True, 
+                        help="Whether to create a shareable link (default: True)")
+    parser.add_argument("--port", type=int, default=None, 
+                        help="Port to run the server on (default: Gradio default)")
+    parser.add_argument("--host", type=str, default="127.0.0.1", 
+                        help="Host to bind to (default: 127.0.0.1)")
+    
+    args = parser.parse_args()
+    
+    # Launch the interface with the specified parameters
+    demo.queue().launch(
+        share=args.share,
+        server_name=args.host,
+        server_port=args.port
+    )
