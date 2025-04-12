@@ -22,6 +22,7 @@ from einops import rearrange
 from transformers import AutoTokenizer, AutoModelForCausalLM, LogitsProcessor, LogitsProcessorList
 from omegaconf import OmegaConf
 import tempfile
+from argparse import Namespace
 
 # Import modules from inference directory
 sys.path.append(os.path.join(base_dir, 'inference'))
@@ -42,16 +43,50 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     print("Number of Songs:", num_songs)
     print("Inference has started!")
     
+    # Create args object to mirror infer.py's args
+    args = Namespace(
+        # prompt
+        genre_txt="",
+        lyrics_txt="",
+        # Values from generate() parameters
+        run_n_segments=num_sequences,
+        max_new_tokens=num_tokens,
+        seed=seed,
+        # Values that are hardcoded in process.py
+        stage1_model="m-a-p/YuE-s1-7B-anneal-en-cot",
+        stage2_model="m-a-p/YuE-s2-1B-general",
+        stage2_batch_size=4,
+        output_dir="./output",
+        repetition_penalty=1.1,
+        cuda_idx=0,
+        # Default values from infer.py
+        use_audio_prompt=False,
+        audio_prompt_path="",
+        prompt_start_time=0.0,
+        prompt_end_time=30.0,
+        use_dual_tracks_prompt=False,
+        vocal_track_prompt_path="",
+        instrumental_track_prompt_path="",
+        keep_intermediate=False,
+        disable_offload_model=False,
+        basic_model_config='./xcodec_mini_infer/final_ckpt/config.yaml',
+        resume_path='./xcodec_mini_infer/final_ckpt/ckpt_00360000.pth',
+        config_path='./xcodec_mini_infer/decoders/config.yaml',
+        vocal_decoder_path='./xcodec_mini_infer/decoders/decoder_131000.pth',
+        inst_decoder_path='./xcodec_mini_infer/decoders/decoder_151000.pth',
+        rescale=False
+    )
+    
     # Set fixed parameters
     print("[processing] Setting fixed parameters...")
-    cuda_idx = 0
-    stage1_model = "m-a-p/YuE-s1-7B-anneal-en-cot"
-    stage2_model = "m-a-p/YuE-s2-1B-general"
-    stage2_batch_size = 4
-    output_dir = "../output"
-    max_new_tokens = num_tokens
-    repetition_penalty = 1.1
-    run_n_segments = num_sequences
+    cuda_idx = args.cuda_idx
+    stage1_model = args.stage1_model
+    stage2_model = args.stage2_model
+    stage2_batch_size = args.stage2_batch_size
+    output_dir = args.output_dir
+    max_new_tokens = args.max_new_tokens
+    repetition_penalty = args.repetition_penalty
+    run_n_segments = args.run_n_segments
     
     # Create temp files for genre and lyrics
     print("[processing] Creating temporary files for inputs...")
@@ -69,6 +104,13 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     stage2_output_dir = os.path.join(output_dir, "stage2")
     os.makedirs(stage1_output_dir, exist_ok=True)
     os.makedirs(stage2_output_dir, exist_ok=True)
+
+    # Set the genre_txt and lyrics_txt in args
+    args.genre_txt = genre_file
+    args.lyrics_txt = lyrics_file
+    print("[processing] Created args object:")
+    import pprint
+    pprint.pprint(vars(args))
     
     # Seed everything
     print("[processing] Setting random seeds...")
@@ -496,8 +538,8 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
             instrumental_output = process_audio(
                 npy,
                 os.path.join(vocoder_stems_dir, 'itrack.mp3'),
-                False,  # rescale
-                None,   # args
+                args.rescale,  # rescale
+                args,   # args
                 inst_decoder,
                 codec_model
             )
@@ -506,8 +548,8 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
             vocal_output = process_audio(
                 npy,
                 os.path.join(vocoder_stems_dir, 'vtrack.mp3'),
-                False,  # rescale
-                None,   # args 
+                args.rescale,  # rescale
+                args,   # args 
                 vocal_decoder,
                 codec_model
             )
