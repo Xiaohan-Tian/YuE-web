@@ -33,6 +33,7 @@ from post_process_audio import replace_low_freq_with_energy_matched
 
 def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     # Log input values
+    print("[processing] Logging input parameters...")
     print("Genre Prompt:", genre_prompt)
     print("Lyrics:", lyrics)
     print("Number of Sequences:", num_sequences)
@@ -42,6 +43,7 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     print("Inference has started!")
     
     # Set fixed parameters
+    print("[processing] Setting fixed parameters...")
     cuda_idx = 0
     stage1_model = "m-a-p/YuE-s1-7B-anneal-en-cot"
     stage2_model = "m-a-p/YuE-s2-1B-general"
@@ -52,6 +54,7 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     run_n_segments = num_sequences
     
     # Create temp files for genre and lyrics
+    print("[processing] Creating temporary files for inputs...")
     with tempfile.NamedTemporaryFile(mode='w', delete=False) as genre_file:
         genre_file.write(genre_prompt)
         genre_txt = genre_file.name
@@ -61,12 +64,14 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
         lyrics_txt = lyrics_file.name
     
     # Setup output directories
+    print("[processing] Setting up output directories...")
     stage1_output_dir = os.path.join(output_dir, "stage1")
     stage2_output_dir = os.path.join(output_dir, "stage2")
     os.makedirs(stage1_output_dir, exist_ok=True)
     os.makedirs(stage2_output_dir, exist_ok=True)
     
     # Seed everything
+    print("[processing] Setting random seeds...")
     def seed_everything(seed=42): 
         random.seed(seed) 
         np.random.seed(seed) 
@@ -78,9 +83,11 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     seed_everything(seed if seed != 0 else random.randint(1, 10000))
     
     # Setup device
+    print("[processing] Setting up device...")
     device = torch.device(f"cuda:{cuda_idx}" if torch.cuda.is_available() else "cpu")
     
     # Load tokenizer and model
+    print("[processing] Loading tokenizer and model...")
     mmtokenizer = _MMSentencePieceTokenizer(os.path.join(base_dir, "inference/mm_tokenizer_v0.2_hf/tokenizer.model"))
     model = AutoModelForCausalLM.from_pretrained(
         stage1_model, 
@@ -94,6 +101,7 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
         model = torch.compile(model)
     
     # Setup codec tools
+    print("[processing] Setting up codec tools...")
     codectool = CodecManipulator("xcodec", 0, 1)
     codectool_stage2 = CodecManipulator("xcodec", 0, 8)
     model_config = OmegaConf.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/config.yaml'))
@@ -139,9 +147,11 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
         return structured_lyrics
 
     # Stage 1 inference
+    print("[processing] Starting Stage 1 inference...")
     stage1_output_set = []
     
     # Load genre and lyrics
+    print("[processing] Loading genre and lyrics from temporary files...")
     with open(genre_txt) as f:
         genres = f.read().strip()
     with open(lyrics_txt) as f:
@@ -241,12 +251,13 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     stage1_output_set.append(inst_save_path)
 
     # Offload model
+    print("[processing] Offloading Stage 1 model...")
     model.cpu()
     del model
     torch.cuda.empty_cache()
 
     # Stage 2 inference
-    print("Stage 2 inference...")
+    print("[processing] Starting Stage 2 inference...")
     model_stage2 = AutoModelForCausalLM.from_pretrained(
         stage2_model, 
         torch_dtype=torch.bfloat16,
@@ -401,6 +412,7 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
         torchaudio.save(str(path), wav, sample_rate=sample_rate, encoding='PCM_S', bits_per_sample=16)
     
     # Reconstruct tracks
+    print("[processing] Reconstructing tracks...")
     recons_output_dir = os.path.join(output_dir, "recons")
     recons_mix_dir = os.path.join(recons_output_dir, 'mix')
     os.makedirs(recons_mix_dir, exist_ok=True)
@@ -418,6 +430,7 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
         save_audio(decodec_rlt, save_path, 16000)
     
     # Mix tracks
+    print("[processing] Mixing tracks...")
     for inst_path in tracks:
         try:
             if (inst_path.endswith('.wav') or inst_path.endswith('.mp3')) \
@@ -436,6 +449,7 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
             print(e)
     
     # Vocoder to upsample audios
+    print("[processing] Running vocoder for upsampling...")
     vocal_decoder, inst_decoder = build_codec_model(
         os.path.join(base_dir, 'inference/xcodec_mini_infer/decoders/config.yaml'),
         os.path.join(base_dir, 'inference/xcodec_mini_infer/decoders/decoder_131000.pth'),
@@ -480,6 +494,7 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
         print(f"mix failed! inst: {instrumental_output.shape}, vocal: {vocal_output.shape}")
     
     # Post process
+    print("[processing] Running post-processing...")
     final_output = os.path.join(output_dir, os.path.basename(recons_mix))
     replace_low_freq_with_energy_matched(
         a_file=recons_mix,     # 16kHz
@@ -489,10 +504,11 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     )
     
     # Clean up temp files
+    print("[processing] Cleaning up temporary files...")
     os.unlink(genre_txt)
     os.unlink(lyrics_txt)
     
-    print("Inference is done!")
+    print("[processing] Inference is complete!")
     print(f"Output file: {final_output}")
     
     return final_output
