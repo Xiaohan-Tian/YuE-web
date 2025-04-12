@@ -94,9 +94,14 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
         torch_dtype=torch.bfloat16,
         attn_implementation="flash_attention_2",
     )
+
+    print("[processing] moving model to device...")
     model.to(device)
+
+    print("[processing] setting model to evaluation mode...")
     model.eval()
     
+    print("[processing] compiling model...")
     if torch.__version__ >= "2.0.0":
         model = torch.compile(model)
     
