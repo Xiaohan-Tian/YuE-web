@@ -70,6 +70,9 @@ stage1_output_dir = os.path.join(args.output_dir, f"stage1")
 stage2_output_dir = stage1_output_dir.replace('stage1', 'stage2')
 os.makedirs(stage1_output_dir, exist_ok=True)
 os.makedirs(stage2_output_dir, exist_ok=True)
+
+print("[processing] Logging input parameters...")
+
 def seed_everything(seed=42): 
     random.seed(seed) 
     np.random.seed(seed) 
@@ -77,10 +80,13 @@ def seed_everything(seed=42):
     torch.cuda.manual_seed_all(seed) 
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+print("[processing] Setting random seeds...")
 seed_everything(args.seed)
 # load tokenizer and model
 device = torch.device(f"cuda:{cuda_idx}" if torch.cuda.is_available() else "cpu")
+print("[processing] Setting up device...")
 mmtokenizer = _MMSentencePieceTokenizer("./mm_tokenizer_v0.2_hf/tokenizer.model")
+print("[processing] Loading tokenizer and model...")
 model = AutoModelForCausalLM.from_pretrained(
     stage1_model, 
     torch_dtype=torch.bfloat16,
@@ -89,8 +95,11 @@ model = AutoModelForCausalLM.from_pretrained(
     )
 # to device, if gpu is available
 model.to(device)
+print("[processing] moving model to device...")
 model.eval()
+print("[processing] setting model to evaluation mode...")
 
+print("[processing] compiling model...")
 if torch.__version__ >= "2.0.0":
     model = torch.compile(model)
 
@@ -102,6 +111,8 @@ parameter_dict = torch.load(args.resume_path, map_location='cpu', weights_only=F
 codec_model.load_state_dict(parameter_dict['codec_model'])
 codec_model.to(device)
 codec_model.eval()
+
+print("[processing] Setting up codec tools...")
 
 class BlockTokenRangeProcessor(LogitsProcessor):
     def __init__(self, start_id, end_id):
@@ -150,6 +161,8 @@ full_lyrics = "\n".join(lyrics)
 prompt_texts = [f"Generate music from the given lyrics segment by segment.\n[Genre] {genres}\n{full_lyrics}"]
 prompt_texts += lyrics
 
+
+print("[processing] Starting Stage 1 inference...")
 
 random_id = uuid.uuid4()
 output_seq = None
@@ -230,6 +243,7 @@ eoa_idx = np.where(ids == mmtokenizer.eoa)[0].tolist()
 if len(soa_idx)!=len(eoa_idx):
     raise ValueError(f'invalid pairs of soa and eoa, Num of soa: {len(soa_idx)}, Num of eoa: {len(eoa_idx)}')
 
+print("[processing] Starting audio conversion and processing...")
 vocals = []
 instrumentals = []
 range_begin = 1 if args.use_audio_prompt or args.use_dual_tracks_prompt else 0
@@ -257,8 +271,10 @@ if not args.disable_offload_model:
     model.cpu()
     del model
     torch.cuda.empty_cache()
+    print("[processing] Offloading Stage 1 model...")
 
 print("Stage 2 inference...")
+print("[processing] Starting Stage 2 inference...")
 model_stage2 = AutoModelForCausalLM.from_pretrained(
     stage2_model, 
     torch_dtype=torch.bfloat16,
@@ -268,6 +284,7 @@ model_stage2 = AutoModelForCausalLM.from_pretrained(
 model_stage2.to(device)
 model_stage2.eval()
 
+print("[processing] compiling model...")
 if torch.__version__ >= "2.0.0":
     model_stage2 = torch.compile(model_stage2)
 
