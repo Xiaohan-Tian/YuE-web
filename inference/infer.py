@@ -106,6 +106,8 @@ if torch.__version__ >= "2.0.0":
 codectool = CodecManipulator("xcodec", 0, 1)
 codectool_stage2 = CodecManipulator("xcodec", 0, 8)
 model_config = OmegaConf.load(args.basic_model_config)
+
+print(f"[processing] initializing codec model... {model_config.generator.name}, {model_config.generator.config}")
 codec_model = eval(model_config.generator.name)(**model_config.generator.config).to(device)
 parameter_dict = torch.load(args.resume_path, map_location='cpu', weights_only=False)
 codec_model.load_state_dict(parameter_dict['codec_model'])
