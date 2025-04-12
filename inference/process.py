@@ -113,56 +113,22 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     print(f"[processing] loading codec model: {os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/config.yaml')}")
     model_config = OmegaConf.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/config.yaml'))
 
-    print("[processing] importing SoundStream class...")
-    from models.soundstream_hubert_new import SoundStream
+    print(f"[processing] initializing codec model... {model_config.generator.name}, {model_config.generator.config}")
+    codec_model = eval(model_config.generator.name)(**model_config.generator.config).to(device)
 
-    print("[processing] clearing CUDA cache before SoundStream creation...")
-    torch.cuda.empty_cache()
+    print(f"[processing] loading codec model parameters: {os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/ckpt_00360000.pth')}")
+    parameter_dict = torch.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/ckpt_00360000.pth'), 
+                              map_location='cpu', weights_only=False)
 
-    print("[processing] creating SoundStream instance with parameters:")
-    print(f"- n_filters: {model_config.generator.config['n_filters']}")
-    print(f"- D: {model_config.generator.config['D']}")
-    print(f"- target_bandwidths: {model_config.generator.config['target_bandwidths']}")
-    print(f"- ratios: {model_config.generator.config['ratios']}")
-    print(f"- sample_rate: {model_config.generator.config['sample_rate']}")
-    print(f"- bins: {model_config.generator.config['bins']}")
+    print("[processing] loading codec model parameters...") 
+    codec_model.load_state_dict(parameter_dict['codec_model'])
 
-    try:
-        # Create instance on CPU first
-        print("[processing] initializing SoundStream on CPU...")
-        codec_model = SoundStream(
-            n_filters=model_config.generator.config['n_filters'],
-            D=model_config.generator.config['D'],
-            target_bandwidths=model_config.generator.config['target_bandwidths'],
-            ratios=model_config.generator.config['ratios'],
-            sample_rate=model_config.generator.config['sample_rate'],
-            bins=model_config.generator.config['bins']
-        )
-        print("[processing] SoundStream instance created on CPU")
-        
-        # Load parameters while still on CPU
-        print("[processing] loading parameters on CPU...")
-        parameter_dict = torch.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/ckpt_00360000.pth'), 
-                                  map_location='cpu', weights_only=False)
-        codec_model.load_state_dict(parameter_dict['codec_model'])
-        print("[processing] parameters loaded successfully")
-        
-        # Now move to GPU
-        print("[processing] moving model to device...")
-        codec_model = codec_model.to(device)
-        print("[processing] model moved to device successfully")
-        
-        print("[processing] setting model to evaluation mode...")
-        codec_model.eval()
-        print("[processing] model set to evaluation mode")
-        
-    except Exception as e:
-        print(f"[processing] Error during SoundStream initialization: {str(e)}")
-        print(f"[processing] Error type: {type(e)}")
-        import traceback
-        print(f"[processing] Traceback: {traceback.format_exc()}")
-        raise
+    print("[processing] moving codec model to device...")
+    codec_model.to(device)
 
+    print("[processing] setting codec model to evaluation mode...")
+    codec_model.eval()
+    
     # Define helper classes and functions
     class BlockTokenRangeProcessor(LogitsProcessor):
         def __init__(self, start_id, end_id):
