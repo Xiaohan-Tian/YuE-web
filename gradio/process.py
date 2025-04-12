@@ -109,12 +109,24 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     print("[processing] Setting up codec tools...")
     codectool = CodecManipulator("xcodec", 0, 1)
     codectool_stage2 = CodecManipulator("xcodec", 0, 8)
+
+    print(f"[processing] loading codec model: {os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/config.yaml')}")
     model_config = OmegaConf.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/config.yaml'))
+
+    print(f"[processing] initializing codec model... {model_config.generator.name}, {model_config.generator.config}")
     codec_model = eval(model_config.generator.name)(**model_config.generator.config).to(device)
+
+    print(f"[processing] loading codec model parameters: {os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/ckpt_00360000.pth')}")
     parameter_dict = torch.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/ckpt_00360000.pth'), 
                               map_location='cpu', weights_only=False)
+
+    print("[processing] loading codec model parameters...") 
     codec_model.load_state_dict(parameter_dict['codec_model'])
+
+    print("[processing] moving codec model to device...")
     codec_model.to(device)
+
+    print("[processing] setting codec model to evaluation mode...")
     codec_model.eval()
     
     # Define helper classes and functions
