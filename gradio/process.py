@@ -1,7 +1,12 @@
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../inference/xcodec_mini_infer'))
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../inference/xcodec_mini_infer', 'descriptaudiocodec'))
+
+# Get the absolute path to the project root directory
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Add paths relative to project root
+sys.path.append(os.path.join(base_dir, 'inference/xcodec_mini_infer'))
+sys.path.append(os.path.join(base_dir, 'inference/xcodec_mini_infer', 'descriptaudiocodec'))
 import re
 import random
 import uuid
@@ -19,7 +24,7 @@ from omegaconf import OmegaConf
 import tempfile
 
 # Import modules from inference directory
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../inference'))
+sys.path.append(os.path.join(base_dir, 'inference'))
 from codecmanipulator import CodecManipulator
 from mmtokenizer import _MMSentencePieceTokenizer
 from models.soundstream_hubert_new import SoundStream
@@ -76,7 +81,7 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     device = torch.device(f"cuda:{cuda_idx}" if torch.cuda.is_available() else "cpu")
     
     # Load tokenizer and model
-    mmtokenizer = _MMSentencePieceTokenizer("../inference/mm_tokenizer_v0.2_hf/tokenizer.model")
+    mmtokenizer = _MMSentencePieceTokenizer(os.path.join(base_dir, "inference/mm_tokenizer_v0.2_hf/tokenizer.model"))
     model = AutoModelForCausalLM.from_pretrained(
         stage1_model, 
         torch_dtype=torch.bfloat16,
@@ -91,9 +96,10 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     # Setup codec tools
     codectool = CodecManipulator("xcodec", 0, 1)
     codectool_stage2 = CodecManipulator("xcodec", 0, 8)
-    model_config = OmegaConf.load('../inference/xcodec_mini_infer/final_ckpt/config.yaml')
+    model_config = OmegaConf.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/config.yaml'))
     codec_model = eval(model_config.generator.name)(**model_config.generator.config).to(device)
-    parameter_dict = torch.load('../inference/xcodec_mini_infer/final_ckpt/ckpt_00360000.pth', map_location='cpu', weights_only=False)
+    parameter_dict = torch.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/ckpt_00360000.pth'), 
+                              map_location='cpu', weights_only=False)
     codec_model.load_state_dict(parameter_dict['codec_model'])
     codec_model.to(device)
     codec_model.eval()
@@ -430,9 +436,11 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
             print(e)
     
     # Vocoder to upsample audios
-    vocal_decoder, inst_decoder = build_codec_model('../inference/xcodec_mini_infer/decoders/config.yaml', 
-                                                   '../inference/xcodec_mini_infer/decoders/decoder_131000.pth', 
-                                                   '../inference/xcodec_mini_infer/decoders/decoder_151000.pth')
+    vocal_decoder, inst_decoder = build_codec_model(
+        os.path.join(base_dir, 'inference/xcodec_mini_infer/decoders/config.yaml'),
+        os.path.join(base_dir, 'inference/xcodec_mini_infer/decoders/decoder_131000.pth'),
+        os.path.join(base_dir, 'inference/xcodec_mini_infer/decoders/decoder_151000.pth')
+    )
     vocoder_output_dir = os.path.join(output_dir, 'vocoder')
     vocoder_stems_dir = os.path.join(vocoder_output_dir, 'stems')
     vocoder_mix_dir = os.path.join(vocoder_output_dir, 'mix')
