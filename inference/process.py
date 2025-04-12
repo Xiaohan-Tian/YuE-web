@@ -106,8 +106,8 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     os.makedirs(stage2_output_dir, exist_ok=True)
 
     # Set the genre_txt and lyrics_txt in args
-    args.genre_txt = genre_file
-    args.lyrics_txt = lyrics_file
+    args.genre_txt = genre_txt
+    args.lyrics_txt = lyrics_txt
     print("[processing] Created args object:")
     import pprint
     pprint.pprint(vars(args))
