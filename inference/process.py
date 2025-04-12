@@ -467,11 +467,23 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     
     # Vocoder to upsample audios
     print("[processing] Running vocoder for upsampling...")
+    print("[processing] Building codec model with paths:")
+    print(f"  config: ./xcodec_mini_infer/decoders/config.yaml")
+    print(f"  vocal decoder: ./xcodec_mini_infer/decoders/decoder_131000.pth")
+    print(f"  instrumental decoder: ./xcodec_mini_infer/decoders/decoder_151000.pth")
+
     vocal_decoder, inst_decoder = build_codec_model(
-        os.path.join(base_dir, 'inference/xcodec_mini_infer/decoders/config.yaml'),
-        os.path.join(base_dir, 'inference/xcodec_mini_infer/decoders/decoder_131000.pth'),
-        os.path.join(base_dir, 'inference/xcodec_mini_infer/decoders/decoder_151000.pth')
+        './xcodec_mini_infer/decoders/config.yaml',
+        './xcodec_mini_infer/decoders/decoder_131000.pth',
+        './xcodec_mini_infer/decoders/decoder_151000.pth'
     )
+
+    if vocal_decoder is None or inst_decoder is None:
+        print("[processing] Error: Failed to initialize decoders")
+        print(f"  vocal_decoder: {vocal_decoder}")
+        print(f"  inst_decoder: {inst_decoder}")
+        raise RuntimeError("Failed to initialize vocoder decoders")
+    
     vocoder_output_dir = os.path.join(output_dir, 'vocoder')
     vocoder_stems_dir = os.path.join(vocoder_output_dir, 'stems')
     vocoder_mix_dir = os.path.join(vocoder_output_dir, 'mix')

@@ -16,7 +16,10 @@ def run_generation(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_so
         output_path = generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs)
         return "Generation complete!", output_path
     except Exception as e:
-        return f"Error: {str(e)}", None
+        import traceback
+        error_msg = f"Error: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        print(error_msg)  # Print to console
+        return error_msg, None  # Return to Gradio UI
 
 # Load default content from files
 def load_text_file(file_path):
