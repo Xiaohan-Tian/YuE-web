@@ -113,8 +113,18 @@ def generate(genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs):
     print(f"[processing] loading codec model: {os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/config.yaml')}")
     model_config = OmegaConf.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/config.yaml'))
 
-    print(f"[processing] initializing codec model... {model_config.generator.name}, {model_config.generator.config}")
-    codec_model = eval(model_config.generator.name)(**model_config.generator.config).to(device)
+    print("[processing] importing SoundStream class...")
+    from models.soundstream_hubert_new import SoundStream
+
+    print("[processing] creating SoundStream instance...")
+    codec_model = SoundStream(
+        n_filters=model_config.generator.config['n_filters'],
+        D=model_config.generator.config['D'],
+        target_bandwidths=model_config.generator.config['target_bandwidths'],
+        ratios=model_config.generator.config['ratios'],
+        sample_rate=model_config.generator.config['sample_rate'],
+        bins=model_config.generator.config['bins']
+    )
 
     print(f"[processing] loading codec model parameters: {os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/ckpt_00360000.pth')}")
     parameter_dict = torch.load(os.path.join(base_dir, 'inference/xcodec_mini_infer/final_ckpt/ckpt_00360000.pth'), 
