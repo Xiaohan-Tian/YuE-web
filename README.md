@@ -7,9 +7,9 @@
 
 **Forked from [YuE Official Repo](https://github.com/multimodal-art-projection/YuE)**
 
-This repository includes a simple Gradio server so that users can easily run DiffRhythm with a web-based GUI.
+This repository includes a simple Gradio server so that users can easily run YuE with a web-based GUI.
 
-Please follow the official installation guide below to install DiffRhythm. Once you are done with installation, simply execute the following command to start the Gradio server:
+Please follow the official installation guide below to install YuE. Once you are done with installation, simply execute the following command to start the Gradio server:
 ```bash
 python ./inference/server.py [--share] [--server_name host_name] [--server_port port_number]
 ```
