@@ -43,11 +43,11 @@ lyrics_default = load_text_file(lyrics_path)
 # Create the Gradio interface
 with gr.Blocks() as demo:
     # Title area
-    gr.Markdown("# YuE Gradio GUI (based on YuEGP v3's Gradio GUI)")
+    gr.Markdown("# YuE Gradio GUI")
     gr.Markdown("""
     Official Website: [YuE](https://github.com/multimodal-art-projection/YuE)
                 
-    GPU Poor version by DeepBeepMeep ([GitHub](https://github.com/deepbeepmeep/YuEGP)). Switch to profile 1 for fast generation (requires a 16 GB VRAM GPU), 1 min of song will take only 4 minutes
+    Inspired by YuEGP v3's Gradio GUI by DeepBeepMeep ([GitHub](https://github.com/deepbeepmeep/YuEGP)).
     """)
     
     # Two-column layout
@@ -66,14 +66,6 @@ with gr.Blocks() as demo:
                 placeholder="[verse]\nStaring at the sunset, colors paint the sky\nThoughts of you keep swirling, can't deny\nI know I let you down, I made mistakes\nBut I'm here to mend the heart I didn't break\n\n[chorus]\nEvery road you take, I'll be one step behind\nEvery dream you chase, I'm reaching for the light",
                 lines=30,
                 value=lyrics_default
-            )
-            
-            num_songs = gr.Slider(
-                minimum=1, 
-                maximum=25, 
-                value=1, 
-                step=1,
-                label="Number of Generated Songs per Genres Prompt"
             )
         
         # Right column
@@ -113,26 +105,19 @@ with gr.Blocks() as demo:
                 interactive=False,
                 type="filepath"
             )
-            
-            # History of Generated Songs
-            history = gr.File(
-                label="History of Generated Songs (From most Recent to Oldest)",
-                file_count="multiple",
-                interactive=False
-            )
     
     # Event handlers
     generate_button.click(
         fn=run_generation,
-        inputs=[genre_prompt, lyrics, num_sequences, num_tokens, seed, num_songs],
+        inputs=[genre_prompt, lyrics, num_sequences, num_tokens, seed],
         outputs=[status, audio_output]
     )
 
 # Parse command line arguments
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch YuE Gradio GUI")
-    parser.add_argument("--share", action="store_true", default=True, 
-                        help="Whether to create a shareable link (default: True)")
+    parser.add_argument("--share", action="store_true", default=False, 
+                        help="Whether to create a shareable link (default: False)")
     parser.add_argument("--port", type=int, default=None, 
                         help="Port to run the server on (default: Gradio default)")
     parser.add_argument("--host", type=str, default="127.0.0.1", 

@@ -5,6 +5,20 @@
     </picture>
 </p>
 
+**Forked from [YuE Official Repo](https://github.com/multimodal-art-projection/YuE)**
+
+This repository includes a simple Gradio server so that users can easily run DiffRhythm with a web-based GUI.
+
+Please follow the official installation guide below to install DiffRhythm. Once you are done with installation, simply execute the following command to start the Gradio server:
+```bash
+python ./inference/server.py [--share] [--server_name host_name] [--server_port port_number]
+```
+
+Example:
+```bash
+python ./inference/server.py --share
+```
+
 <p align="center">
     <a href="https://map-yue.github.io/">Demo 🎶</a> &nbsp;|&nbsp; 📑 <a href="https://arxiv.org/abs/2503.08638">Paper</a>
     <br>
